@@ -503,16 +503,43 @@ function pauseAllMedia(){
 function resumeMedia(){
   if(globalMuted)return;
   const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
-  if(wasPlayingOnHide&&!onPage6){
-    const hs=document.getElementById('herSong');
-    if(hs){hs.volume=0.35;hs.play().catch(()=>{});}
+  const afterSinging=['page8','end','replay'];
+  const cur=order[curIdx];
+  const isAfter=afterSinging.includes(cur);
+  // page6：恢复唱歌视频
+  if(onPage6){
+    const cv=document.getElementById('clip2');
+    if(cv){cv.muted=false;cv.volume=0.7;cv.play().catch(()=>{});}
+    return;
   }
-  // page6唱歌视频恢复
-  const cv=document.getElementById('clip2');
-  if(cv&&onPage6){cv.muted=false;cv.play().catch(()=>{});}
+  // page6之后：恢复她唱的歌，不恢复BGM
+  if(isAfter){
+    if(wasPlayingOnHide||herSongStarted){
+      const hs=document.getElementById('herSong');
+      if(hs){hs.volume=0.35;hs.play().catch(()=>{});}
+    }
+    // 确保BGM停
+    if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;}
+    if(bgmGain&&audioCtx){try{bgmGain.gain.value=0;}catch(e){}}
+    return;
+  }
+  // page6之前：恢复BGM，不恢复她的歌
+  if(wasPlayingOnHide){
+    const hs=document.getElementById('herSong');
+    if(hs&&!hs.paused){hs.pause();}
+  }
+  if(bgmGain&&audioCtx&&bgmTickFn){
+    try{
+      if(!bgmTimer){bgmTimer=setInterval(bgmTickFn,450);}
+      bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
+      bgmGain.gain.linearRampToValueAtTime(.3,audioCtx.currentTime+.5);
+    }catch(e){}
+  }
 }
 window.addEventListener('pagehide',pauseAllMedia);
 window.addEventListener('blur',pauseAllMedia);
+window.addEventListener('pageshow',()=>{resumeMedia();});
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     pauseAllMedia();
@@ -768,34 +795,31 @@ function go(name,dir){
       if(herFadeTimer)clearInterval(herFadeTimer);
       herFadeTimer=setInterval(()=>{
         const t=Math.min(1,(performance.now()-start)/dur);
-        hs.volume=0.4*(1-t);
-        if(t>=1){hs.pause();hs.volume=0.4;clearInterval(herFadeTimer);herFadeTimer=null;}
+        hs.volume=0.35*(1-t);
+        if(t>=1){hs.pause();hs.volume=0.35;clearInterval(herFadeTimer);herFadeTimer=null;}
       },30);
     }
     stopBirthdaySong();
-    setTimeout(()=>{
+    window._page6Timer=setTimeout(()=>{
       const v=document.getElementById('clip2');
       v.muted=false; v.volume=0.7;
-      const playVideo=()=>{
-        v.play().catch(()=>{v.muted=true;v.play();});
-      };
-      if(v.readyState>=2){
-        playVideo();
-      } else {
-        v.addEventListener('canplay',playVideo,{once:true});
-      }
+      v.play().catch(()=>{v.muted=true;v.play();});
     },600);
   }
-  // 离开唱歌视频页：停视频，恢复她的歌
+  // 离开唱歌视频页：立即停视频，取消未执行的定时器
   if(name!=='page6'){
+    if(window._page6Timer){clearTimeout(window._page6Timer);window._page6Timer=null;}
     const v=document.getElementById('clip2');
-    if(!v.paused){v.pause();v.currentTime=0;}
+    v.pause();v.currentTime=0;v.muted=true;
     if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;}
     herFading=false;
-    if(herSongStarted){
-      const hs=document.getElementById('herSong');
-      hs.volume=0.4;
-      hs.play().catch(()=>{});
+    // 只在唱歌页之后才播她的歌
+    if(['page8','end'].includes(name)){
+      if(!herSongStarted){startHerSongFadeIn();}
+      else{
+        const hs=document.getElementById('herSong');
+        hs.volume=0.35;hs.play().catch(()=>{});
+      }
     }
   }
   if(name==='page4'||name==='page9'){
