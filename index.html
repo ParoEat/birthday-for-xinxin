@@ -1354,18 +1354,18 @@ function startReplay(){
     next.style.display='block';
     next.style.zIndex='3';
     next.style.transition='none';
-    next.style.transform='scale(1.15) translateY(20px)';
-    next.style.opacity='0';
-    next.style.filter='blur(15px)';
+    next.style.transform='translateX(100%) scale(0.9)';
+    next.style.opacity='0.5';
+    next.style.filter='blur(20px)';
     void next.offsetWidth;
-    next.style.transition='all 1.5s cubic-bezier(.16,1,.3,1)';
-    next.style.transform='scale(1) translateY(0)';
+    next.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
+    next.style.transform='translateX(0) scale(1)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
       cur.style.zIndex='2';
-      cur.style.transition='all 1.5s cubic-bezier(.16,1,.3,1)';
-      cur.style.transform='scale(0.8) translateY(-30px)';
+      cur.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
+      cur.style.transform='translateX(-25%) scale(0.92)';
       cur.style.opacity='0';
       cur.style.filter='blur(15px)';
     }
