@@ -506,14 +506,16 @@ function resumeMedia(){
     const hs=document.getElementById('herSong');
     if(hs){hs.volume=0.4;hs.play().catch(()=>{});}
   }
-  // 渐变恢复Web Audio音量（不suspend/resume，避免排程note堆积）
-  if(bgmGain&&audioCtx){
+  // 渐变恢复Web Audio音量
+  if(bgmGain&&audioCtx&&bgmTickFn){
     try{
       const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
       if(!onPage6){
         bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
         bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
-        bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+.8);
+        bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+.5);
+        // 重启八音盒定时器，继续排程
+        if(!bgmTimer){bgmTimer=setInterval(bgmTickFn,450);}
       }
     }catch(e){}
   }
@@ -822,6 +824,7 @@ function goPrev(){
 
 /* ==================== 温馨BGM（和弦+琶音+旋律） ==================== */
 let audioCtx=null,bgmGain=null,bgmTimer=null;
+let bgmStep=0,bgmTickFn=null;
 function startBGM(){
   if(audioCtx)return;
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -849,7 +852,6 @@ function startBGM(){
     N.D5,N.D5,N.E5,N.D5,
     N.C5,0,0,0
   ];
-  let step=0;
 
   function playPiano(freq,start,dur,vol){
     const o=audioCtx.createOscillator(),g=audioCtx.createGain();
@@ -872,26 +874,26 @@ function startBGM(){
   }
 
   const beat=.45; // 每拍0.45秒
-  function tick(){
+  bgmTickFn=function tick(){
     const t=audioCtx.currentTime+.05;
-    const chord=chords[Math.floor(step/4)%chords.length];
+    const chord=chords[Math.floor(bgmStep/4)%chords.length];
     // pad长音（每和弦换一次）
-    if(step%4===0){
+    if(bgmStep%4===0){
       playPad(chord[0],t,beat*4,.08);
       playPad(chord[2],t,beat*4,.06);
     }
     // 琶音伴奏（每拍一个分解音）
-    const arpNote=chord[step%4];
+    const arpNote=chords[bgmStep%4];
     playPiano(arpNote,t,beat*1.5,.15);
     // 高八度琶音
     playPiano(arpNote*2,t,beat*.8,.06);
     // 旋律
-    const melNote=melody[step%melody.length];
+    const melNote=melody[bgmStep%melody.length];
     if(melNote>0)playPiano(melNote,t,beat*1.2,.22);
-    step++;
-  }
-  tick();
-  bgmTimer=setInterval(tick,beat*1000*4/4);
+    bgmStep++;
+  };
+  bgmTickFn();
+  bgmTimer=setInterval(bgmTickFn,beat*1000*4/4);
 }
 function fadeOutBGM(){
   if(bgmGain&&audioCtx){
