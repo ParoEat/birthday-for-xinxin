@@ -502,18 +502,19 @@ function pauseAllMedia(){
 }
 function resumeMedia(){
   if(globalMuted)return;
-  if(wasPlayingOnHide){
+  const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
+  // 在唱歌页不恢复herSong（clip2在播），其他页恢复
+  if(wasPlayingOnHide&&!onPage6){
     const hs=document.getElementById('herSong');
-    if(hs){hs.volume=0.4;hs.play().catch(()=>{});}
+    if(hs){hs.volume=0.35;hs.play().catch(()=>{});}
   }
-  // 恢复BGM：渐变音量+重启排程timer（旧音符最多1秒自然消失）
+  // 恢复BGM
   if(bgmGain&&audioCtx&&bgmTickFn){
     try{
-      const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
       if(!onPage6){
         bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
         bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
-        bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+.5);
+        bgmGain.gain.linearRampToValueAtTime(.3,audioCtx.currentTime+.5);
         if(!bgmTimer){bgmTimer=setInterval(bgmTickFn,450);}
       }
     }catch(e){}
@@ -832,6 +833,18 @@ function goPrev(){
 /* ==================== 温馨BGM（和弦+琶音+旋律） ==================== */
 let audioCtx=null,bgmGain=null,bgmTimer=null;
 let bgmStep=0,bgmTickFn=null;
+function playSfx(freq,dur,type){
+  if(!audioCtx||globalMuted)return;
+  try{
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type||'sine';o.frequency.value=freq;
+    g.gain.setValueAtTime(0,audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(.15,audioCtx.currentTime+.01);
+    g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+    o.connect(g).connect(audioCtx.destination);
+    o.start();o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
 function startBGM(){
   if(audioCtx)return;
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -1118,11 +1131,13 @@ function gameLoop(){
       if(it.type==='cloud'){
         score=Math.max(0,score-1);
         showPop(it.x,it.y,'-1','#999');
+        playSfx(200,.15,'sawtooth');
       }else{
         const gain=it.type==='heart'?2:1;
         const actualGain=Math.min(gain,target-score);
         score=Math.min(target,score+gain);
         showPop(it.x,it.y,'+'+actualGain,'#d4608a');
+        playSfx(it.type==='heart'?880:660,.12,'sine');
       }
       document.getElementById('scoreText').textContent=Math.min(target,score);
       items.splice(i,1);
