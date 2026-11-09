@@ -1335,20 +1335,22 @@ function startReplay(){
     const el=makeEl(item);
     next.appendChild(el);
     next.style.display='block';
+    next.style.zIndex='3';
     next.style.transition='none';
-    next.style.transform='scale(1.15)';
+    next.style.transform='scale(1.2) translateY(40px)';
     next.style.opacity='0';
-    next.style.filter='blur(20px)';
+    next.style.filter='blur(25px)';
     void next.offsetWidth;
-    next.style.transition='all 1.2s cubic-bezier(.22,1,.36,1)';
-    next.style.transform='scale(1)';
+    next.style.transition='all 1.2s cubic-bezier(.16,1,.3,1)';
+    next.style.transform='scale(1) translateY(0)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
-      cur.style.transition='all 1.2s cubic-bezier(.22,1,.36,1)';
-      cur.style.transform='scale(0.75)';
+      cur.style.zIndex='2';
+      cur.style.transition='all 1.2s cubic-bezier(.16,1,.3,1)';
+      cur.style.transform='scale(0.7) translateY(-50px)';
       cur.style.opacity='0';
-      cur.style.filter='blur(20px)';
+      cur.style.filter='blur(25px)';
     }
     if(item.t==='video'){
       el.muted=true;el.playsInline=true;el.loop=true;
