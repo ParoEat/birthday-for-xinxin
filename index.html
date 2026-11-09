@@ -968,23 +968,34 @@ function playBirthdaySong(){
   ];
   const beat=.65; // 放慢，舒缓
   let t=audioCtx.currentTime+.5;
-  function note(freq,start,dur,vol,type){
+  function note(freq,start,dur,vol){
+    // 主旋律：triangle波（八音盒质感）
     const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-    o.type=type||'sine';o.frequency.value=freq;
+    o.type='triangle';o.frequency.value=freq;
     g.gain.setValueAtTime(0,start);
-    g.gain.linearRampToValueAtTime(vol,start+.05);
+    g.gain.linearRampToValueAtTime(vol,start+.03);
     g.gain.exponentialRampToValueAtTime(.001,start+dur);
     o.connect(g).connect(bgmGain);
     o.start(start);o.stop(start+dur+.1);
     birthdayOscs.push(o);
+    // 高八度泛音
     const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
     o2.type='sine';o2.frequency.value=freq*2;
     g2.gain.setValueAtTime(0,start);
-    g2.gain.linearRampToValueAtTime(vol*.2,start+.05);
-    g2.gain.exponentialRampToValueAtTime(.001,start+dur*.8);
+    g2.gain.linearRampToValueAtTime(vol*.15,start+.03);
+    g2.gain.exponentialRampToValueAtTime(.001,start+dur*.7);
     o2.connect(g2).connect(bgmGain);
     o2.start(start);o2.stop(start+dur);
     birthdayOscs.push(o2);
+    // 低八度和声
+    const o3=audioCtx.createOscillator(),g3=audioCtx.createGain();
+    o3.type='sine';o3.frequency.value=freq/2;
+    g3.gain.setValueAtTime(0,start);
+    g3.gain.linearRampToValueAtTime(vol*.2,start+.05);
+    g3.gain.exponentialRampToValueAtTime(.001,start+dur);
+    o3.connect(g3).connect(bgmGain);
+    o3.start(start);o3.stop(start+dur);
+    birthdayOscs.push(o3);
   }
   // 播两遍
   for(let rep=0;rep<2;rep++){
@@ -1022,8 +1033,9 @@ document.getElementById('soundBtn').addEventListener('click',(e)=>{
 
 /* ==================== 翻页点击+手势 ==================== */
 document.getElementById('startBtn').addEventListener('click',()=>{
-  startBGM();
   go('gameStage',1);
+  if(!audioCtx)startBGM();
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
 });
 // 所有书页点击翻页：中间和右半屏下一页，左边缘上一页
 ['page1','page2','page3','page4','page5','page6','page7','page8','page9','intro1','unlock'].forEach(pid=>{
