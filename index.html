@@ -506,18 +506,14 @@ function resumeMedia(){
     const hs=document.getElementById('herSong');
     if(hs){hs.volume=0.4;hs.play().catch(()=>{});}
   }
-  // 彻底断开旧bgmGain（旧oscillator全部静音），新建gain重新开始
-  if(audioCtx&&bgmTickFn){
+  // 恢复BGM：渐变音量+重启排程timer（旧音符最多1秒自然消失）
+  if(bgmGain&&audioCtx&&bgmTickFn){
     try{
       const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
       if(!onPage6){
-        // 断开旧gain，旧音符全部消失
-        try{bgmGain.disconnect();}catch(e){}
-        bgmGain=audioCtx.createGain();
-        bgmGain.gain.value=0;
-        bgmGain.connect(audioCtx.destination);
+        bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
         bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+.5);
-        // 重启timer
         if(!bgmTimer){bgmTimer=setInterval(bgmTickFn,450);}
       }
     }catch(e){}
@@ -1357,10 +1353,14 @@ function startReplay(){
     next.style.display='block';
     next.style.zIndex='3';
     next.style.transition='none';
+    next.style.transform='scale(1.1)';
+    next.style.opacity='0';
+    next.style.filter='blur(20px)';
+    void next.offsetWidth;
+    next.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
     next.style.transform='scale(1)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
-    void next.offsetWidth;
     if(cur.firstElementChild){
       cur.style.zIndex='2';
       cur.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
