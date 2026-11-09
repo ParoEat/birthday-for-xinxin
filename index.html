@@ -910,10 +910,10 @@ function startBGM(){
   bgmTickFn=function tick(){
     const t=audioCtx.currentTime+.05;
     const chord=chords[Math.floor(bgmStep/4)%chords.length];
-    // pad长音（每和弦换一次）
+    // pad长音（极轻底色，不要呜呜声）
     if(bgmStep%4===0){
-      playPad(chord[0],t,beat*4,.08);
-      playPad(chord[2],t,beat*4,.06);
+      playPad(chord[0],t,beat*4,.02);
+      playPad(chord[2],t,beat*4,.015);
     }
     // 琶音伴奏（每拍一个分解音）
     const arpNote=chords[bgmStep%4];
