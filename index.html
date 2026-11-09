@@ -488,6 +488,7 @@ function pauseAllMedia(){
   const hs=document.getElementById('herSong');
   wasPlayingOnHide=hs?!hs.paused:false;
   document.querySelectorAll('audio,video').forEach(m=>{try{m.pause();}catch(e){}});
+  if(audioCtx){try{audioCtx.suspend();}catch(e){}}
 }
 function resumeMedia(){
   if(globalMuted)return;
