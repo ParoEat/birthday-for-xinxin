@@ -488,13 +488,17 @@ function pauseAllMedia(){
   const hs=document.getElementById('herSong');
   wasPlayingOnHide=hs?!hs.paused:false;
   document.querySelectorAll('audio,video').forEach(m=>{try{m.pause();}catch(e){}});
-  // 直接停掉所有生日歌oscillator，不留残余
+  // 直接静音所有Web Audio，不suspend（避免resume时排程note堆积爆音）
+  if(bgmGain&&audioCtx){
+    try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.gain.value=0;}catch(e){}
+  }
+  // 停掉生日歌所有oscillator
   if(typeof birthdayOscs!=='undefined'){
     birthdayOscs.forEach(o=>{try{o.stop();}catch(e){}});
     birthdayOscs=[];
   }
   if(typeof bgmTimer!=='undefined'&&bgmTimer){clearInterval(bgmTimer);bgmTimer=null;}
-  if(audioCtx){try{audioCtx.suspend();}catch(e){}}
+  if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;herFading=false;}
 }
 function resumeMedia(){
   if(globalMuted)return;
@@ -502,8 +506,16 @@ function resumeMedia(){
     const hs=document.getElementById('herSong');
     if(hs){hs.volume=0.4;hs.play().catch(()=>{});}
   }
-  if(audioCtx&&audioCtx.state==='suspended'){
-    audioCtx.resume().catch(()=>{});
+  // 渐变恢复Web Audio音量（不suspend/resume，避免排程note堆积）
+  if(bgmGain&&audioCtx){
+    try{
+      const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
+      if(!onPage6){
+        bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
+        bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+.8);
+      }
+    }catch(e){}
   }
   // 回忆轮播里的视频重新播放，并强制容器恢复显示
   document.querySelectorAll('#replay1,#replay2').forEach(c=>{
@@ -1339,20 +1351,20 @@ function startReplay(){
     next.style.display='block';
     next.style.zIndex='3';
     next.style.transition='none';
-    next.style.transform='scale(1.18) translateY(25px)';
+    next.style.transform='scale(1.15) translateY(20px)';
     next.style.opacity='0';
-    next.style.filter='blur(20px)';
+    next.style.filter='blur(15px)';
     void next.offsetWidth;
-    next.style.transition='all 1.4s cubic-bezier(.19,1,.22,1)';
+    next.style.transition='all 1.5s cubic-bezier(.16,1,.3,1)';
     next.style.transform='scale(1) translateY(0)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
       cur.style.zIndex='2';
-      cur.style.transition='all 1.4s cubic-bezier(.19,1,.22,1)';
-      cur.style.transform='scale(0.7) translateY(-40px)';
+      cur.style.transition='all 1.5s cubic-bezier(.16,1,.3,1)';
+      cur.style.transform='scale(0.8) translateY(-30px)';
       cur.style.opacity='0';
-      cur.style.filter='blur(20px)';
+      cur.style.filter='blur(15px)';
     }
     if(item.t==='video'){
       el.muted=true;el.playsInline=true;el.loop=true;
