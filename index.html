@@ -499,15 +499,7 @@ function resumeMedia(){
   if(audioCtx&&audioCtx.state==='suspended'){
     audioCtx.resume().catch(()=>{});
   }
-  // 检查当前页，如果在page6唱歌页就不恢复BGM音量
-  const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
-  if(bgmGain&&audioCtx&&!onPage6){
-    try{
-      bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-      bgmGain.gain.setValueAtTime(bgmGain.gain.value,audioCtx.currentTime);
-      bgmGain.gain.linearRampToValueAtTime(.4,audioCtx.currentTime+.5);
-    }catch(e){}
-  }
+  // 不动bgmGain——audioCtx.resume()会自动恢复所有正在播放的oscillator
   // 回忆轮播里的视频重新播放，并强制容器恢复显示
   document.querySelectorAll('#replay1,#replay2').forEach(c=>{
     if(c.style.display!=='none'){
@@ -1344,20 +1336,20 @@ function startReplay(){
     next.style.display='block';
     next.style.zIndex='3';
     next.style.transition='none';
-    next.style.transform='scale(1.15) translateY(20px)';
+    next.style.transform='scale(1.2) translateY(30px) rotate(2deg)';
     next.style.opacity='0';
-    next.style.filter='blur(18px)';
+    next.style.filter='blur(30px)';
     void next.offsetWidth;
-    next.style.transition='all .9s cubic-bezier(.22,1,.36,1)';
-    next.style.transform='scale(1) translateY(0)';
+    next.style.transition='all 1.3s cubic-bezier(.19,1,.22,1)';
+    next.style.transform='scale(1) translateY(0) rotate(0deg)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
       cur.style.zIndex='2';
-      cur.style.transition='all .9s cubic-bezier(.22,1,.36,1)';
-      cur.style.transform='scale(0.75) translateY(-30px)';
+      cur.style.transition='all 1.3s cubic-bezier(.19,1,.22,1)';
+      cur.style.transform='scale(0.65) translateY(-60px) rotate(-3deg)';
       cur.style.opacity='0';
-      cur.style.filter='blur(18px)';
+      cur.style.filter='blur(30px)';
     }
     if(item.t==='video'){
       el.muted=true;el.playsInline=true;el.loop=true;
