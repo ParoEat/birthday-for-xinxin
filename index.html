@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>小书</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    width:100%; height:100vh; overflow:hidden;
+    background:#0d0a18;
+    font-family:"Songti SC","Noto Serif SC",serif;
+    color:#5a4a3a;
+    user-select:none; -webkit-user-select:none;
+    -webkit-font-smoothing:antialiased;
+  }
+  #bg { position:absolute; top:0; left:0; right:0; bottom:0; z-index:0; height:100vh; background:radial-gradient(ellipse at 50% 30%, #fef9f0 0%, #fdf0e6 60%, #f8e6d8 100%); }
+  /* 烟花页才深色 */
+  #bg.dark { background:radial-gradient(ellipse at 50% 40%, #1a1530 0%, #0d0a18 100%); }
+
+  .stage {
+    position:absolute; top:0; left:0; right:0; bottom:0; z-index:3; height:100vh;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:28px; text-align:center;
+    opacity:0; visibility:hidden;
+    pointer-events:none;
+  }
+  .stage.active { opacity:1; visibility:visible; z-index:4; pointer-events:auto; }
+  .stage.dark { color:#f0e6d8; }
+  /* 照片页：暖深棕像旧相册 */
+  .stage.photo-dark {
+    background:radial-gradient(ellipse at 30% 20%, #4a3828 0%, #2a1f18 70%);
+    color:#f0e6d8; overflow:hidden;
+  }
+  /* 动态光斑 */
+  .bokeh {
+    position:absolute; border-radius:50%;
+    filter:blur(40px); pointer-events:none; z-index:0;
+  }
+  .bokeh.b1 { width:200px;height:200px; background:rgba(232,180,120,.15); top:10%; left:-5%; animation:bokehMove1 12s ease-in-out infinite alternate; }
+  .bokeh.b2 { width:150px;height:150px; background:rgba(255,180,150,.12); bottom:15%; right:-3%; animation:bokehMove2 15s ease-in-out infinite alternate; }
+  .bokeh.b3 { width:100px;height:100px; background:rgba(255,220,180,.1); top:50%; left:40%; animation:bokehMove3 10s ease-in-out infinite alternate; }
+  @keyframes bokehMove1 {
+    0%{transform:translate(0,0);} 100%{transform:translate(60px,40px);}
+  }
+  @keyframes bokehMove2 {
+    0%{transform:translate(0,0);} 100%{transform:translate(-40px,-60px);}
+  }
+  @keyframes bokehMove3 {
+    0%{transform:translate(0,0);} 100%{transform:translate(-30px,30px);}
+  }
+  /* 照片轻微浮动（加在img上，不影响入场动画） */
+  .photo-frame.small img { animation:photoFloat 4s ease-in-out infinite alternate; }
+  .photo-frame.small.offset img { animation:photoFloat2 5s ease-in-out infinite alternate; }
+  @keyframes photoFloat {
+    0%{transform:translateY(0) rotate(-.5deg);}
+    100%{transform:translateY(-4px) rotate(.5deg);}
+  }
+  @keyframes photoFloat2 {
+    0%{transform:translateY(0) rotate(.5deg);}
+    100%{transform:translateY(-4px) rotate(-.5deg);}
+  }
+  .stage.photo-dark .book-title { color:#d4a574; }
+  .stage.photo-dark .page-num { color:rgba(255,255,255,.25); }
+  .photo-grid {
+    display:flex; gap:14px; align-items:flex-start; justify-content:center;
+  }
+  .photo-frame.small {
+    width:150px; padding:8px 8px 32px 8px;
+  }
+  .photo-frame.small .caption {
+    position:absolute; bottom:10px; left:0; right:0;
+    text-align:center; font-size:11px; color:#b8a08a;
+    font-family:'Short Stack','Comic Sans MS',cursive; letter-spacing:1px;
+  }
+  .photo-frame.small .caption {
+    position:absolute; bottom:8px; left:0; right:0;
+    text-align:center; font-size:10px; color:#999;
+    font-family:'Short Stack',cursive; letter-spacing:1px;
+  }
+  .side-note {
+    font-size:16px; color:#f0c8a0; letter-spacing:2px;
+    font-family:'Short Stack','Comic Sans MS',cursive;
+    opacity:0; animation:fadeUp 1s 1.5s ease forwards;
+    text-shadow:0 2px 8px rgba(0,0,0,.4), 0 0 20px rgba(240,200,160,.3);
+  }
+  .photo-frame.small.offset {
+    transform:rotate(4deg) translateY(15px);
+  }
+  .photo-frame.small::before {
+    width:55px; height:18px; top:-8px;
+  }
+  .stage.photo-dark.active .photo-frame.small:nth-child(1) {
+    animation:photoPop .8s .25s cubic-bezier(.2,.9,.3,1.3) backwards forwards;
+  }
+  .stage.photo-dark.active .photo-frame.small:nth-child(2) {
+    animation:photoPopOffset .9s .45s cubic-bezier(.2,.9,.3,1.3) backwards forwards;
+  }
+  @keyframes photoPopOffset {
+    0% { opacity:0; transform:translateY(60px) rotate(10deg) scale(.85); }
+    100% { opacity:1; transform:translateY(15px) rotate(4deg) scale(1); }
+  }
+  /* 照片页漂浮光点 */
+  .sparkle {
+    position:absolute; border-radius:50%;
+    background:radial-gradient(circle,#ffd89b 0%,transparent 70%);
+    pointer-events:none; opacity:0; z-index:0;
+    animation:floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0% { opacity:0; transform:translateY(0) scale(.5); }
+    20% { opacity:.6; }
+    80% { opacity:.3; }
+    100% { opacity:0; transform:translateY(-100vh) scale(1.2); }
+  }
+  .back-btn {
+    position:absolute; top:16px; left:16px; z-index:5;
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(255,255,255,.7);
+    border:1px solid rgba(139,111,71,.15);
+    color:#8b6f47; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,sans-serif;
+  }
+  .stage.dark .back-btn { background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.2); }
+
+  .page-num {
+    position:absolute; bottom:24px; left:0; right:0;
+    font-size:11px; letter-spacing:4px; color:#c9a0b0;
+    font-family:-apple-system,sans-serif;
+  }
+  .stage.dark .page-num { color:rgba(255,255,255,.3); }
+  .turn {
+    position:absolute; bottom:24px; right:24px;
+    font-size:11px; letter-spacing:3px; color:#d4608a;
+    animation:bob 2s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%,100% { transform:translateY(0); opacity:.6; }
+    50% { transform:translateY(4px); opacity:1; }
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(15px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  #cover h1 {
+    font-size:22px; font-weight:400; letter-spacing:6px;
+    color:#8b6f47; margin-bottom:12px;
+  }
+  #cover .sub {
+    font-size:13px; color:#b09880; letter-spacing:3px;
+    margin-bottom:40px; line-height:2;
+  }
+  #startBtn {
+    padding:13px 40px; border:none; border-radius:999px;
+    background:linear-gradient(135deg,#e8b4b8,#f0c8c8);
+    color:#fff; font-size:13px; letter-spacing:4px;
+    cursor:pointer; font-family:inherit;
+    box-shadow:0 6px 20px rgba(232,180,184,.4);
+  }
+
+  #gameStage { padding:0; background:#fff8f0; }
+  #gameHud {
+    position:absolute; top:50px; left:0; right:0; z-index:5;
+    text-align:center; pointer-events:none;
+  }
+  #gameHud .score { font-size:28px; font-weight:600; color:#d4608a; }
+  #gameHud .target { font-size:12px; color:#b09880; margin-top:4px; }
+  #gameHud .rules {
+    margin-top:10px; display:flex; gap:12px; justify-content:center;
+    font-size:11px; color:#999; letter-spacing:1px;
+  }
+  #gameCanvas { position:absolute; inset:0; touch-action:none; }
+  .pop-text {
+    position:absolute; z-index:6; font-size:16px; font-weight:600;
+    color:#d4608a; pointer-events:none;
+    animation:popUp .8s ease-out forwards;
+  }
+  @keyframes popUp {
+    0% { opacity:1; transform:translateY(0); }
+    100% { opacity:0; transform:translateY(-40px); }
+  }
+
+  #unlock h2 {
+    font-size:22px; font-weight:400; letter-spacing:8px;
+    margin-bottom:16px;
+  }
+  #unlock p { font-size:13px; letter-spacing:2px; }
+
+  .book-title {
+    font-size:12px; letter-spacing:6px; color:#c9a0b0; margin-bottom:28px;
+    opacity:0; transform:translateY(-10px);
+  }
+  .stage.active .book-title {
+    animation:fadeDown .7s .1s ease forwards;
+  }
+  @keyframes fadeDown {
+    to { opacity:1; transform:translateY(0); }
+  }
+  .stage.dark .book-title { color:rgba(255,255,255,.5); }
+  .photo-wrap { position:relative; }
+  .photo-frame {
+    position:relative;
+    background:#fffdf8; padding:10px 10px 42px 10px;
+    border-radius:3px;
+    box-shadow:0 12px 40px rgba(139,111,71,.18), 0 3px 8px rgba(139,111,71,.1);
+    width:230px;
+  }
+  /* 胶带贴角 */
+  .photo-frame::before {
+    content:''; position:absolute; top:-10px; left:50%;
+    width:80px; height:24px; transform:translateX(-50%) rotate(-2deg);
+    background:rgba(255,235,200,.7);
+    border-left:1px dashed rgba(200,180,140,.3);
+    border-right:1px dashed rgba(200,180,140,.3);
+  }
+  /* 不同页不同角度（只对单张大照片生效，小图由grid控制） */
+  #page8 .photo-frame { transform:rotate(-1.5deg); }
+  /* 入场动画 */
+  .stage.active .photo-frame {
+    animation:photoPop .8s .25s cubic-bezier(.2,.9,.3,1.3) backwards forwards;
+  }
+  @keyframes photoPop {
+    0% { opacity:0; transform:translateY(50px) rotate(-10deg) scale(.85); }
+    100% { opacity:1; transform:translateY(0) rotate(-3deg) scale(1); }
+  }
+  #page2.stage.active .photo-frame {
+    animation:photoPop2 .8s .25s cubic-bezier(.2,.9,.3,1.3) backwards forwards;
+  }
+  @keyframes photoPop2 {
+    0% { opacity:0; transform:translateY(50px) rotate(8deg) scale(.85); }
+    100% { opacity:1; transform:translateY(0) rotate(-2deg) scale(1); }
+  }
+  .photo-frame img {
+    width:100%; display:block; border-radius:2px;
+    filter:saturate(1.05) contrast(1.02);
+  }
+  /* 书页底部小字 */
+  .caption {
+    position:absolute; bottom:14px; left:0; right:0;
+    font-size:10px; color:#b09880; letter-spacing:2px;
+  }
+
+  .joke-page {
+    max-width:300px;
+    font-size:15px; line-height:2.4; letter-spacing:1px;
+    color:#6b5545; text-align:left;
+  }
+  .joke-page .punch {
+    display:block; margin-top:16px; text-align:center;
+    font-size:16px; color:#d4608a; letter-spacing:2px;
+  }
+  .joke-page .quote {
+    display:block; margin-top:14px; text-align:center;
+    font-size:16px; color:#d4608a;
+  }
+
+  .video-wrap {
+    width:min(82vw,320px);
+    border-radius:16px; overflow:hidden;
+    box-shadow:0 10px 30px rgba(139,111,71,.25);
+    background:#3a2a2a;
+  }
+  .video-wrap video { width:100%; display:block; background:#3a2a2a; }
+
+  #end h2 {
+    font-size:26px; font-weight:400; letter-spacing:10px;
+    margin-bottom:16px;
+  }
+  #end .name { font-size:15px; letter-spacing:5px; margin-bottom:20px; }
+  #end .wish { font-size:13px; letter-spacing:2px; line-height:2.2; }
+
+  #soundBtn {
+    position:fixed; top:16px; right:16px; z-index:10;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(255,255,255,.8);
+    border:1px solid rgba(139,111,71,.2);
+    color:#8b6f47; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<button id="soundBtn">♪</button>
+<audio id="herSong" loop preload="auto" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/LuGMbIkAJoBBoBxPjlEckfw0nef"></audio>
+
+<!-- 扉页 -->
+<section class="stage active" id="cover">
+  <h1>送 你 一 本 小 书</h1>
+  <div class="sub">翻 开 看 看</div>
+  <button id="startBtn">翻 开</button>
+</section>
+
+<!-- 游戏 -->
+<section class="stage" id="gameStage">
+  <div id="gameHud">
+    <div class="score" id="scoreText">0</div>
+    <div class="target" id="targetText">/ 18</div>
+    <div class="rules">
+      <span>☆ 星星 +1</span>
+      <span>♥ 爱心 +2</span>
+      <span>☁ 乌云 -1</span>
+    </div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+</section>
+
+<!-- 通关 -->
+<section class="stage dark" id="unlock">
+  <h2>咦？</h2>
+  <p>好 像 有 东 西</p>
+  <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:40px;letter-spacing:3px;animation:bob 2s infinite;">点 一 下 屏 幕</div>
+</section>
+
+<!-- 铺垫页 -->
+<section class="stage photo-dark" id="intro1">
+  <div style="max-width:260px;">
+    <div style="font-size:13px;letter-spacing:6px;color:#d4a574;margin-bottom:24px;opacity:0;animation:fadeUp 1.2s .3s ease forwards;">翻 翻 看</div>
+    <div style="font-size:18px;line-height:2.2;color:#f0e6d8;letter-spacing:3px;opacity:0;animation:fadeUp 1.2s .9s ease forwards;">
+      给 你 的 18 岁<br>留 了 本 小 东 西
+    </div>
+    <div style="font-size:12px;color:rgba(240,230,216,.5);margin-top:40px;letter-spacing:2px;opacity:0;animation:fadeUp 1.2s 1.6s ease forwards;">
+      轻 轻 翻 页 ›
+    </div>
+  </div>
+</section>
+
+<!-- 壹：两张照片错落 -->
+<section class="stage photo-dark" id="page1">
+  <div class="book-title">壹 · 那 年</div>
+  <div class="photo-grid">
+    <div class="photo-frame small">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/UUKQbCJzooy1UxxhCfhcwxXPnke">
+      <div class="caption">很美</div>
+    </div>
+    <div class="photo-frame small offset">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/RIHWbrjpyoRHLoxBsxIcjfmknBe">
+      <div class="caption">很搭</div>
+    </div>
+  </div>
+  <div class="page-num">— 1 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 贰：蛋糕前 + wink -->
+<section class="stage photo-dark" id="page2">
+  <div class="book-title">贰 · 那 天</div>
+  <div class="photo-grid">
+    <div class="photo-frame small">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/RlFNbZL0noXYMIxn6MTccPEPnBe">
+      <div class="caption">才发现有个蛋糕</div>
+    </div>
+    <div class="photo-frame small offset">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Ri2hbq66jodUYux9U0zcKTOwnof">
+      <div class="caption">帅不帅？</div>
+    </div>
+  </div>
+  <div class="page-num">— 2 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 叁：段子1 -->
+<section class="stage" id="page3">
+  <div class="book-title">叁 · 十 八 岁</div>
+  <div class="joke-page">
+    18岁，一个崭新的开始。<br>
+    从今天起，我将正式告别过去，迎接未来。<br>
+    学会独立，学会担当，<br>
+    学会用成年人的方式解决问题。<br><br>
+    我相信，未来无论遇到什么困难，<br>
+    我都能从容面对，勇敢承担。<br><br>
+    毕竟，我已经不是当年那个<br>
+    可以被一顿打解决所有问题的小孩了。
+    <span class="punch">—— 现 在 得 两 顿 。</span>
+  </div>
+  <div class="page-num">— 3 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 肆：动感视频（静音，BGM继续） -->
+<section class="stage" id="page4">
+  <div class="book-title">肆 · 喵 喵 喵</div>
+  <div class="video-wrap">
+    <video id="clip1" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/XroJbRU9NoNUb3xgp3ZcCvGAnIZ" muted loop playsinline></video>
+  </div>
+  <div class="page-num">— 4 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 伍：段子2 -->
+<section class="stage" id="page5">
+  <div class="book-title">伍 · 变 化</div>
+  <div class="joke-page">
+    18岁最大的变化就是：
+    <span class="quote">以前被骂，可以说"我还小"。</span>
+    <span class="quote">现在只能回一句："你说得对。"</span>
+  </div>
+  <div class="page-num">— 5 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 陆：她唱歌视频（保留原声） -->
+<section class="stage" id="page6">
+  <div class="book-title">捌 · 耳 熟 吗 ？你 唱 的</div>
+  <div class="video-wrap">
+    <video id="clip2" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/FhlpbeAeMo7m5QxYoDccKZsrn4f" loop playsinline preload="auto" muted poster=""></video>
+  </div>
+  <div class="page-num">— 8 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 捌：段子3 -->
+<section class="stage" id="page7">
+  <div class="book-title">柒 · 成 年</div>
+  <div class="joke-page">
+    正式成为成年人。<br><br>
+    从今天起，我有权对所有人说：
+    <span class="quote">"我已经成年了，你管不着。"</span>
+    <span class="punch">然后继续被管。</span>
+  </div>
+  <div class="page-num">— 7 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 玖：她做的海报 -->
+<section class="stage" id="page8">
+  <div class="book-title">玖 · 你 做 的 贺 卡</div>
+  <div class="photo-wrap">
+    <div class="photo-frame" style="width:210px;">
+      <img src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/K6eyb0sPYoWAqIx2GU3cfhvwnjd">
+    </div>
+  </div>
+  <div class="page-num">— 9 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<section class="stage" id="page9">
+  <div class="book-title">陆 · 耶 耶 耶</div>
+  <div class="video-wrap">
+    <video id="clip3" src="https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/MyKPbacrsoUmbFxUDcjccv9gn8b" muted loop playsinline></video>
+  </div>
+  <div class="page-num">— 6 —</div>
+  <div class="turn">翻 页 ›</div>
+</section>
+
+<!-- 结尾 -->
+<section class="stage dark" id="end">
+  <h2>生 日 快 乐</h2>
+  <div class="name">曾 雯 馨 · 18 岁</div>
+  <div class="wish">
+    愿 你 天 天 开 心<br>
+    愿 你 想 要 的 都 拥 有
+  </div>
+  <div class="page-num">— 终 —</div>
+  <div id="eggHint" style="font-size:11px;color:rgba(255,255,255,.35);margin-top:10px;letter-spacing:3px;animation:bob 2s infinite;">点 一 下 屏 幕</div>
+  <div id="replay" style="position:fixed;inset:0;z-index:15;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#2a1f2e 0%,#0a0810 100%);overflow:hidden;opacity:0;transition:opacity 1.2s ease;">
+    <canvas id="replayFireworks" style="position:absolute;inset:0;z-index:0;"></canvas>
+    <div id="replayBokeh" style="position:absolute;inset:0;overflow:hidden;z-index:1;backdrop-filter:blur(8px);"></div>
+    <div style="position:relative;z-index:2;width:min(70vw,280px);aspect-ratio:3/4;">
+      <div id="replay1" style="position:absolute;inset:0;border-radius:12px;overflow:hidden;background:transparent;box-shadow:0 0 100px rgba(200,150,255,.4),0 0 40px rgba(255,200,150,.2),0 20px 60px rgba(0,0,0,.5);"></div>
+      <div id="replay2" style="position:absolute;inset:0;border-radius:12px;overflow:hidden;background:transparent;box-shadow:0 0 100px rgba(200,150,255,.4),0 0 40px rgba(255,200,150,.2),0 20px 60px rgba(0,0,0,.5);"></div>
+    </div>
+    <div id="replayText" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;color:rgba(255,255,255,.6);font-size:15px;letter-spacing:8px;font-weight:300;z-index:3;opacity:0;transition:opacity 1.5s ease;text-shadow:0 0 20px rgba(200,150,255,.5);">愿 你 十 八 岁 快 乐</div>
+  </div>
+</section>
+
+<script>
+/* ==================== Canvas：只画烟花，不加花哨粒子 ==================== */
+const cv=document.getElementById('bg');
+const ctx=cv.getContext('2d');
+let W,H,DPR=Math.min(window.devicePixelRatio||1,2);
+function resize(){
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR;
+  cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+resize(); window.addEventListener('resize',resize);
+let wasPlayingOnHide=false;
+function pauseAllMedia(){
+  const hs=document.getElementById('herSong');
+  wasPlayingOnHide=hs?!hs.paused:false;
+  document.querySelectorAll('audio,video').forEach(m=>{try{m.pause();}catch(e){}});
+}
+function resumeMedia(){
+  if(globalMuted)return;
+  if(wasPlayingOnHide){
+    const hs=document.getElementById('herSong');
+    if(hs){hs.volume=0.4;hs.play().catch(()=>{});}
+  }
+  if(audioCtx&&audioCtx.state==='suspended'){
+    audioCtx.resume().catch(()=>{});
+  }
+  if(bgmGain&&audioCtx){
+    try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.gain.value=.4;}catch(e){}
+  }
+  // 回忆轮播里的视频重新播放，并强制容器恢复显示
+  document.querySelectorAll('#replay1,#replay2').forEach(c=>{
+    if(c.style.display!=='none'){
+      c.style.opacity='1';
+      c.style.transform='scale(1)';
+      c.style.filter='blur(0)';
+    }
+  });
+  document.querySelectorAll('#replay1 video,#replay2 video').forEach(v=>{
+    v.muted=true;v.play().catch(()=>{});
+  });
+  // page6唱歌视频恢复
+  const cv=document.getElementById('clip2');
+  if(cv&&!cv.paused===false){cv.muted=false;cv.play().catch(()=>{});}
+}
+window.addEventListener('pagehide',pauseAllMedia);
+window.addEventListener('blur',pauseAllMedia);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    pauseAllMedia();
+  } else {
+    resumeMedia();
+  }
+});
+
+const fireworks=[],rockets=[],flashes=[],delayed=[];
+function rand(a,b){return a+Math.random()*(b-a);}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+// 配色：加入金色、玫红、翠绿、天蓝、紫
+const PALETTES=[
+  [45,40,50],          // 金
+  [340,350,320],       // 玫红
+  [180,190,170],       // 青
+  [280,290,260],       // 紫
+  [15,25,350],         // 橙红
+  [210,220,200],       // 天蓝
+  [50,55,45],          // 金白
+];
+const SHAPES=['peony','chrys','willow','heart','ring','peony'];
+
+const SPRITE_SIZE=64,sprites={};
+function getSprite(hue){
+  const k=Math.round(hue/10)*10%360;
+  if(sprites[k])return sprites[k];
+  const c=document.createElement('canvas'); c.width=c.height=SPRITE_SIZE;
+  const g=c.getContext('2d');
+  const gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,`hsla(${k},100%,97%,1)`);
+  gr.addColorStop(.15,`hsla(${k},100%,80%,.95)`);
+  gr.addColorStop(.4,`hsla(${k},95%,65%,.4)`);
+  gr.addColorStop(1,`hsla(${k},90%,55%,0)`);
+  g.fillStyle=gr; g.fillRect(0,0,64,64);
+  sprites[k]=c; return c;
+}
+function drawGlow(x,y,r,hue,alpha){
+  const s=getSprite(hue),size=r*7;
+  ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+  ctx.drawImage(s,x-size/2,y-size/2,size,size);
+  ctx.globalAlpha=1;
+}
+function launchFirework(tx,ty){
+  tx=tx!==undefined?tx:rand(W*.15,W*.85);
+  ty=ty!==undefined?ty:rand(H*.1,H*.35);
+  rockets.push({
+    x:tx+rand(-20,20),y:H+10,tx,ty,
+    vx:rand(-.5,.5),vy:-rand(11,13.5),
+    pal:pick(PALETTES),shape:pick(SHAPES),trail:[],
+    secondary:Math.random()<.35
+  });
+}
+function explode(x,y,pal,shape){
+  flashes.push({x,y,r:5,maxR:rand(110,160),life:1,hue:pick(pal)});
+  const now=performance.now();
+  if(shape==='peony'){
+    const n=80;
+    for(let i=0;i<n;i++){
+      if(fireworks.length>800)break;
+      const a=(Math.PI*2*i)/n+rand(-.05,.05);
+      const spd=rand(2.8,4.8);
+      fireworks.push({
+        x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+        hue:pick(pal),life:1,decay:rand(.005,.009),
+        gravity:.045,drag:.985,trail:[],maxTrail:8,
+        size:rand(2,3.2),spawn:now+rand(0,150)
+      });
+    }
+  } else if(shape==='chrys'){
+    const n=60;
+    for(let i=0;i<n;i++){
+      if(fireworks.length>800)break;
+      const a=(Math.PI*2*i)/n+rand(-.03,.03);
+      const spd=rand(3.5,5);
+      fireworks.push({
+        x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+        hue:pick(pal),life:1,decay:rand(.004,.007),
+        gravity:.035,drag:.98,trail:[],maxTrail:18,
+        size:rand(1.8,2.6),spawn:now+rand(0,100)
+      });
+    }
+  } else if(shape==='willow'){
+    const n=50;
+    for(let i=0;i<n;i++){
+      if(fireworks.length>300)break;
+      const a=(Math.PI*2*i)/n+rand(-.06,.06);
+      const spd=rand(2,3.5);
+      fireworks.push({
+        x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-.5,
+        hue:45,life:1,decay:rand(.003,.006),
+        gravity:.08,drag:.985,trail:[],maxTrail:22,
+        size:rand(1.5,2.2),spawn:now+rand(0,200)
+      });
+    }
+  } else if(shape==='heart'){
+    const n=60;
+    for(let i=0;i<n;i++){
+      if(fireworks.length>300)break;
+      const t=(Math.PI*2*i)/n;
+      const hx=16*Math.pow(Math.sin(t),3);
+      const hy=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+      const sc=rand(.16,.2);
+      fireworks.push({
+        x,y,vx:hx*sc,vy:hy*sc,
+        hue:340,life:1,decay:rand(.005,.008),
+        gravity:.02,drag:.985,trail:[],maxTrail:8,
+        size:rand(1.8,2.5),spawn:now+rand(0,80)
+      });
+    }
+  } else if(shape==='ring'){
+    const n1=50,n2=30;
+    for(let i=0;i<n1;i++){
+      if(fireworks.length>300)break;
+      const a=(Math.PI*2*i)/n1;
+      fireworks.push({
+        x,y,vx:Math.cos(a)*4.2,vy:Math.sin(a)*4.2,
+        hue:pick(pal),life:1,decay:rand(.005,.008),
+        gravity:.03,drag:.985,trail:[],maxTrail:10,
+        size:2.5,spawn:now
+      });
+    }
+    for(let i=0;i<n2;i++){
+      if(fireworks.length>300)break;
+      const a=(Math.PI*2*i)/n2;
+      fireworks.push({
+        x,y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,
+        hue:50,life:1,decay:rand(.006,.009),
+        gravity:.03,drag:.985,trail:[],maxTrail:8,
+        size:2,spawn:now+150
+      });
+    }
+  }
+}
+function fwTick(){
+  ctx.clearRect(0,0,W,H);
+  const now=performance.now();
+  // 延迟爆炸
+  for(let i=delayed.length-1;i>=0;i--){
+    const d=delayed[i];
+    if(now>=d.at){explode(d.x,d.y,d.pal,d.shape);delayed.splice(i,1);}
+  }
+  for(let i=flashes.length-1;i>=0;i--){
+    const f=flashes[i]; f.life-=.08; f.r+=(f.maxR-f.r)*.1;
+    if(f.life<=0){flashes.splice(i,1);continue;}
+    const g=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,f.r);
+    g.addColorStop(0,`hsla(${f.hue},100%,98%,${f.life*.85})`);
+    g.addColorStop(.3,`hsla(${f.hue},100%,80%,${f.life*.4})`);
+    g.addColorStop(1,`hsla(${f.hue},90%,60%,0)`);
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2); ctx.fill();
+  }
+  for(let i=rockets.length-1;i>=0;i--){
+    const r=rockets[i];
+    r.trail.push({x:r.x,y:r.y});
+    if(r.trail.length>16)r.trail.shift();
+    r.x+=r.vx; r.y+=r.vy; r.vy+=.16;
+    for(let t=0;t<r.trail.length;t++){
+      const tp=r.trail[t],a=t/r.trail.length;
+      drawGlow(tp.x,tp.y,2*a,45,a*.7);
+    }
+    drawGlow(r.x,r.y,5,45,1);
+    if(r.vy>=-1||r.y<=r.ty){
+      explode(r.x,r.y,r.pal,r.shape);
+      // 双响：稍后再炸一个小的
+      if(r.secondary){
+        delayed.push({x:r.x+rand(-30,30),y:r.y+rand(-20,20),at:now+rand(250,450),pal:pick(PALETTES),shape:'peony'});
+      }
+      rockets.splice(i,1);
+    }
+  }
+  for(let i=fireworks.length-1;i>=0;i--){
+    const f=fireworks[i];
+    if(now<f.spawn)continue; // 分批出现
+    f.trail.push({x:f.x,y:f.y});
+    if(f.trail.length>f.maxTrail)f.trail.shift();
+    f.x+=f.vx; f.y+=f.vy;
+    f.vy+=f.gravity; f.vx*=f.drag; f.vy*=f.drag;
+    f.life-=f.decay;
+    if(f.life<=0){fireworks.splice(i,1);continue;}
+    let alpha=f.life;
+    if(f.life<.35)f.hue=15; // 余烬变红
+    for(let t=0;t<f.trail.length;t++){
+      const tp=f.trail[t],ta=(t/f.trail.length)*f.life*.45;
+      if(ta>.05)drawGlow(tp.x,tp.y,f.size*.7,f.hue,ta);
+    }
+    drawGlow(f.x,f.y,f.size,f.hue,alpha);
+  }
+  requestAnimationFrame(fwTick);
+}
+fwTick();
+
+/* ==================== 翻页 ==================== */
+const order=['cover','gameStage','unlock','intro1','page1','page2','page3','page4','page5','page9','page7','page6','page8','end'];
+let curIdx=0;
+function go(name,dir){
+  const newIdx=order.indexOf(name);
+  const old=document.querySelector('.stage.active');
+  const el=document.getElementById(name);
+  // 先让新页显示，再隐藏旧页，永不白屏
+  el.classList.add('active');
+  if(old&&old!==el){
+    old.classList.remove('active');
+  }
+  curIdx=newIdx;
+  if(name==='unlock'||name==='end'){
+    cv.classList.add('dark');
+  } else {
+    cv.classList.remove('dark');
+  }
+  if(name==='gameStage'){startGame(); stopHerSong();}
+  if(name==='unlock'){
+    stopHerSong();
+    playBirthdaySong();
+    launchFirework();launchFirework();launchFirework();
+  }
+  // 进过渡页：生日歌渐弱停掉，她的歌开始渐入（只第一次从头）
+  if(name==='intro1'){
+    fadeOutBGM();
+    if(!herSongStarted)startHerSongFadeIn();
+  }
+  // 提前预加载唱歌视频（进page7时就静音播放强制缓冲）
+  if(name==='page7'||name==='page9'){
+    const v=document.getElementById('clip2');
+    v.muted=true;
+    v.play().then(()=>{
+      if(name!=='page6'){v.pause();v.currentTime=0;}
+    }).catch(()=>{});
+  }
+  // 到唱歌视频页：渐出BGM再停，播视频
+  if(name==='page6'){
+    const hs=document.getElementById('herSong');
+    if(!hs.paused){
+      const start=performance.now();
+      const dur=800;
+      if(herFadeTimer)clearInterval(herFadeTimer);
+      herFadeTimer=setInterval(()=>{
+        const t=Math.min(1,(performance.now()-start)/dur);
+        hs.volume=0.4*(1-t);
+        if(t>=1){hs.pause();hs.volume=0.4;clearInterval(herFadeTimer);herFadeTimer=null;}
+      },30);
+    }
+    stopBirthdaySong();
+    setTimeout(()=>{
+      const v=document.getElementById('clip2');
+      v.muted=false; v.volume=0.7;
+      const playVideo=()=>{
+        v.play().catch(()=>{v.muted=true;v.play();});
+      };
+      if(v.readyState>=2){
+        playVideo();
+      } else {
+        v.addEventListener('canplay',playVideo,{once:true});
+      }
+    },600);
+  }
+  // 离开唱歌视频页：停视频，恢复她的歌
+  if(name!=='page6'){
+    const v=document.getElementById('clip2');
+    if(!v.paused){v.pause();v.currentTime=0;}
+    if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;}
+    herFading=false;
+    if(herSongStarted){
+      const hs=document.getElementById('herSong');
+      hs.volume=0.4;
+      hs.play().catch(()=>{});
+    }
+  }
+  if(name==='page4'||name==='page9'){
+    document.getElementById(name==='page4'?'clip1':'clip3').play();
+  }
+  if(name==='end'){
+    [300,700,1100,1600,2200,2900].forEach((t,i)=>{
+      setTimeout(()=>launchFirework(),t);
+    });
+  }
+}
+function goNext(){
+  if(curIdx<order.length-1)go(order[curIdx+1],1);
+}
+function goPrev(){
+  // 游戏页和通关页不能往回翻
+  if(curIdx<=2)return;
+  if(curIdx>0)go(order[curIdx-1],-1);
+}
+
+/* ==================== 温馨BGM（和弦+琶音+旋律） ==================== */
+let audioCtx=null,bgmGain=null,bgmTimer=null;
+function startBGM(){
+  if(audioCtx)return;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  bgmGain=audioCtx.createGain();
+  bgmGain.gain.value=0;
+  bgmGain.connect(audioCtx.destination);
+  bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+2.5);
+
+  // 频率表
+  const N={C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,
+           C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,B5:987.77,C6:1046.5};
+  // 和弦进行：C - G - Am - F  (经典温馨)
+  const chords=[
+    [N.C4,N.E4,N.G4,N.C5],   // C
+    [N.G4,N.B4,N.D5,N.G5],   // G
+    [N.A4,N.C5,N.E5,N.A5],   // Am
+    [N.F4,N.A4,N.C5,N.F5],   // F
+  ];
+  // 旋律（8小节，每和弦对应2拍）
+  const melody=[
+    N.E5,N.D5,N.C5,N.D5,
+    N.E5,N.E5,N.E5,0,
+    N.D5,N.D5,N.D5,0,
+    N.E5,N.G5,N.G5,0,
+    N.E5,N.D5,N.C5,N.D5,
+    N.E5,N.E5,N.E5,N.E5,
+    N.D5,N.D5,N.E5,N.D5,
+    N.C5,0,0,0
+  ];
+  let step=0;
+
+  function playPiano(freq,start,dur,vol){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='triangle';o.frequency.value=freq;
+    g.gain.setValueAtTime(0,start);
+    g.gain.linearRampToValueAtTime(vol,start+.02);
+    g.gain.exponentialRampToValueAtTime(.001,start+dur);
+    o.connect(g).connect(bgmGain);
+    o.start(start);o.stop(start+dur+.1);
+  }
+  function playPad(freq,start,dur,vol){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type='sine';o.frequency.value=freq;
+    g.gain.setValueAtTime(0,start);
+    g.gain.linearRampToValueAtTime(vol,start+.5);
+    g.gain.linearRampToValueAtTime(vol,start+dur-.5);
+    g.gain.linearRampToValueAtTime(0,start+dur);
+    o.connect(g).connect(bgmGain);
+    o.start(start);o.stop(start+dur+.1);
+  }
+
+  const beat=.45; // 每拍0.45秒
+  function tick(){
+    const t=audioCtx.currentTime+.05;
+    const chord=chords[Math.floor(step/4)%chords.length];
+    // pad长音（每和弦换一次）
+    if(step%4===0){
+      playPad(chord[0],t,beat*4,.08);
+      playPad(chord[2],t,beat*4,.06);
+    }
+    // 琶音伴奏（每拍一个分解音）
+    const arpNote=chord[step%4];
+    playPiano(arpNote,t,beat*1.5,.15);
+    // 高八度琶音
+    playPiano(arpNote*2,t,beat*.8,.06);
+    // 旋律
+    const melNote=melody[step%melody.length];
+    if(melNote>0)playPiano(melNote,t,beat*1.2,.22);
+    step++;
+  }
+  tick();
+  bgmTimer=setInterval(tick,beat*1000*4/4);
+}
+function fadeOutBGM(){
+  if(bgmGain&&audioCtx){
+    bgmGain.gain.linearRampToValueAtTime(0,audioCtx.currentTime+1.5);
+  }
+}
+let herSongStarted=false,herFadeTimer=null,herFading=false;
+function stopHerSong(){
+  const hs=document.getElementById('herSong');
+  hs.pause(); hs.volume=0;
+  herSongStarted=false;herFading=false;
+  if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;}
+}
+function pauseHerSong(){
+  document.getElementById('herSong').pause();
+}
+function resumeHerSong(){
+  const hs=document.getElementById('herSong');
+  if(herFading)return;
+  hs.volume=0.4;
+  hs.play().catch(()=>{});
+}
+function startHerSongFadeIn(){
+  const hs=document.getElementById('herSong');
+  hs.pause();
+  try{hs.currentTime=8;}catch(e){}
+  hs.volume=0;
+  herFading=true;
+  hs.play().then(()=>{
+    herSongStarted=true;
+    // 用线性插值平滑渐入，每秒只设10次，避免跳变
+    const startVol=hs.volume;
+    const target=0.4;
+    const steps=20; // 20步=1秒走完
+    let step=0;
+    if(herFadeTimer)clearInterval(herFadeTimer);
+    herFadeTimer=setInterval(()=>{
+      step++;
+      hs.volume=startVol+(target-startVol)*step/steps;
+      if(step>=steps){
+        hs.volume=target;
+        clearInterval(herFadeTimer);herFadeTimer=null;
+        herFading=false;
+      }
+    },50);
+  }).catch(()=>{herFading=false;});
+}
+let birthdayOscs=[];
+function stopBirthdaySong(){
+  birthdayOscs.forEach(o=>{try{o.stop();}catch(e){}});
+  birthdayOscs=[];
+}
+/* 生日歌：通关后切换 */
+function playBirthdaySong(){
+  if(!audioCtx)return;
+  stopBirthdaySong();
+  if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null;}
+  if(bgmGain){
+    try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.disconnect();}catch(e){}
+  }
+  bgmGain=audioCtx.createGain();
+  bgmGain.gain.value=0;
+  bgmGain.connect(audioCtx.destination);
+  bgmGain.gain.linearRampToValueAtTime(.4,audioCtx.currentTime+1.5);
+
+  const N={G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99};
+  // [频率, 拍数]
+  const mel=[
+    [N.G4,.5],[N.G4,.5],[N.A4,1],[N.G4,1],[N.C5,1],[N.B4,2],
+    [N.G4,.5],[N.G4,.5],[N.A4,1],[N.G4,1],[N.D5,1],[N.C5,2],
+    [N.G4,.5],[N.G4,.5],[N.G5,1],[N.E5,1],[N.C5,1],[N.B4,1],[N.A4,2],
+    [N.F5,.5],[N.F5,.5],[N.E5,1],[N.C5,1],[N.D5,1],[N.C5,2],
+  ];
+  const beat=.65; // 放慢，舒缓
+  let t=audioCtx.currentTime+.5;
+  function note(freq,start,dur,vol,type){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type||'sine';o.frequency.value=freq;
+    g.gain.setValueAtTime(0,start);
+    g.gain.linearRampToValueAtTime(vol,start+.05);
+    g.gain.exponentialRampToValueAtTime(.001,start+dur);
+    o.connect(g).connect(bgmGain);
+    o.start(start);o.stop(start+dur+.1);
+    birthdayOscs.push(o);
+    const o2=audioCtx.createOscillator(),g2=audioCtx.createGain();
+    o2.type='sine';o2.frequency.value=freq*2;
+    g2.gain.setValueAtTime(0,start);
+    g2.gain.linearRampToValueAtTime(vol*.2,start+.05);
+    g2.gain.exponentialRampToValueAtTime(.001,start+dur*.8);
+    o2.connect(g2).connect(bgmGain);
+    o2.start(start);o2.stop(start+dur);
+    birthdayOscs.push(o2);
+  }
+  // 播两遍
+  for(let rep=0;rep<2;rep++){
+    mel.forEach(([f,b])=>{
+      note(f,t,b*beat*1.1,.25);
+      t+=b*beat;
+    });
+    t+=beat; // 段间停顿
+  }
+}
+let videoMuted=false;
+let globalMuted=false;
+document.getElementById('soundBtn').addEventListener('click',(e)=>{
+  e.stopPropagation();
+  videoMuted=!videoMuted;
+  globalMuted=videoMuted;
+  const v=document.getElementById('clip2');
+  if(v)v.muted=videoMuted;
+  const hs2=document.getElementById('herSong');
+  if(videoMuted){
+    if(hs2)hs2.pause();
+    if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;}
+    if(bgmGain&&audioCtx){try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.gain.value=0;}catch(e){}}
+  } else {
+    if(hs2&&herSongStarted){
+      hs2.volume=0.4;
+      hs2.play().catch(()=>{});
+    }
+    if(bgmGain&&audioCtx){
+      try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.gain.value=.4;}catch(e){}
+    }
+  }
+  document.getElementById('soundBtn').textContent=videoMuted?'×':'♪';
+});
+
+/* ==================== 翻页点击+手势 ==================== */
+document.getElementById('startBtn').addEventListener('click',()=>{
+  startBGM();
+  go('gameStage',1);
+});
+// 所有书页点击右半屏下一页，左半屏上一页
+['page1','page2','page3','page4','page5','page6','page7','page8','page9','intro1','unlock'].forEach(pid=>{
+  document.getElementById(pid).addEventListener('click',(e)=>{
+    if(e.target.closest('.back-btn'))return;
+    if(e.clientX>window.innerWidth/2)goNext();
+    else goPrev();
+  });
+});
+// 上一页按钮（除了cover和gameStage）
+['intro1','page1','page2','page3','page4','page5','page6','page7','page8','page9','end'].forEach(pid=>{
+  const b=document.createElement('button');
+  b.className='back-btn';b.textContent='‹';
+  b.addEventListener('click',(e)=>{e.stopPropagation();goPrev();});
+  document.getElementById(pid).appendChild(b);
+});
+// 手势滑动
+let touchX=0,touchY=0;
+document.addEventListener('touchstart',(e)=>{
+  touchX=e.touches[0].clientX;touchY=e.touches[0].clientY;
+},{passive:true});
+document.addEventListener('touchend',(e)=>{
+  const dx=e.changedTouches[0].clientX-touchX;
+  const dy=e.changedTouches[0].clientY-touchY;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
+    if(dx<0)goNext(); else goPrev();
+  }
+},{passive:true});
+
+/* ==================== 接星星游戏（修bug版） ==================== */
+const gc=document.getElementById('gameCanvas');
+const gtx=gc.getContext('2d');
+let GW,GH;
+function resizeGame(){
+  GW=gc.width=window.innerWidth;
+  GH=gc.height=window.innerHeight;
+}
+let gameRunning=false,score=0,target=18;
+let basketX=0,basketY=0;
+let items=[],gameTimer=null;
+
+function startGame(){
+  score=0;items=[];
+  document.getElementById('scoreText').textContent='0';
+  resizeGame();
+  basketX=GW/2;basketY=GH-90;
+  gameRunning=true;
+  if(gameTimer)clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    if(!gameRunning)return;
+    const r=Math.random();
+    let type;
+    if(r<.6)type='star';
+    else if(r<.85)type='heart';
+    else type='cloud';
+    items.push({x:rand(30,GW-30),y:-20,vy:rand(1.5,2.5),type:type});
+  },550);
+  gameLoop();
+}
+function drawRoundRect(x,y,w,h,r){
+  gtx.beginPath();
+  gtx.moveTo(x+r,y);
+  gtx.lineTo(x+w-r,y); gtx.arcTo(x+w,y,x+w,y+r,r);
+  gtx.lineTo(x+w,y+h-r); gtx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  gtx.lineTo(x+r,y+h); gtx.arcTo(x,y+h,x,y+h-r,r);
+  gtx.lineTo(x,y+r); gtx.arcTo(x,y,x+r,y,r);
+  gtx.closePath();
+}
+function gameLoop(){
+  if(!gameRunning)return;
+  gtx.clearRect(0,0,GW,GH);
+  // 篮子
+  gtx.save();
+  gtx.shadowColor='rgba(212,96,138,.4)';
+  gtx.shadowBlur=15;
+  gtx.fillStyle='#ff9ec4';
+  drawRoundRect(basketX-35,basketY-15,70,30,15);
+  gtx.fill();
+  gtx.restore();
+  for(let i=items.length-1;i>=0;i--){
+    const it=items[i];
+    it.y+=it.vy;
+    if(Math.abs(it.x-basketX)<45&&Math.abs(it.y-basketY)<28){
+      if(it.type==='cloud'){
+        score=Math.max(0,score-1);
+        showPop(it.x,it.y,'-1','#999');
+      }else{
+        const gain=it.type==='heart'?2:1;
+        const actualGain=Math.min(gain,target-score);
+        score=Math.min(target,score+gain);
+        showPop(it.x,it.y,'+'+actualGain,'#d4608a');
+      }
+      document.getElementById('scoreText').textContent=Math.min(target,score);
+      items.splice(i,1);
+      if(score>=target){
+        gameRunning=false;clearInterval(gameTimer);
+        setTimeout(()=>go('unlock'),400);
+      }
+      continue;
+    }
+    if(it.y>GH+30){items.splice(i,1);continue;}
+    if(it.type==='star'){
+      // 画星星
+      gtx.save(); gtx.translate(it.x,it.y); gtx.rotate(0);
+      gtx.fillStyle='#e8b45c'; gtx.beginPath();
+      for(let k=0;k<5;k++){
+        const a=(Math.PI*2*k)/5-Math.PI/2,a2=a+Math.PI/5;
+        gtx.lineTo(Math.cos(a)*11,Math.sin(a)*11);
+        gtx.lineTo(Math.cos(a2)*5,Math.sin(a2)*5);
+      }
+      gtx.closePath(); gtx.fill(); gtx.restore();
+    }else if(it.type==='heart'){
+      gtx.fillStyle='#ff6b9d'; gtx.beginPath();
+      gtx.moveTo(it.x,it.y+4);
+      gtx.bezierCurveTo(it.x-11,it.y-5,it.x-5,it.y-13,it.x,it.y-4);
+      gtx.bezierCurveTo(it.x+5,it.y-13,it.x+11,it.y-5,it.x,it.y+4);
+      gtx.fill();
+    }else{
+      gtx.fillStyle='#c9c9c9';
+      gtx.beginPath();
+      gtx.arc(it.x-10,it.y,10,0,Math.PI*2);
+      gtx.arc(it.x+10,it.y,10,0,Math.PI*2);
+      gtx.arc(it.x,it.y-6,12,0,Math.PI*2);
+      gtx.fill();
+    }
+  }
+  requestAnimationFrame(gameLoop);
+}
+function showPop(x,y,text,color){
+  const d=document.createElement('div');
+  d.className='pop-text';d.textContent=text;
+  d.style.left=x+'px';d.style.top=y+'px';d.style.color=color;
+  document.getElementById('gameStage').appendChild(d);
+  setTimeout(()=>d.remove(),800);
+}
+function moveBasket(clientX){
+  basketX=Math.max(40,Math.min(GW-40,clientX));
+}
+gc.addEventListener('touchstart',(e)=>{e.preventDefault();moveBasket(e.touches[0].clientX);},{passive:false});
+gc.addEventListener('touchmove',(e)=>{e.preventDefault();moveBasket(e.touches[0].clientX);},{passive:false});
+gc.addEventListener('mousedown',(e)=>moveBasket(e.clientX));
+gc.addEventListener('mousemove',(e)=>{if(e.buttons===1)moveBasket(e.clientX);});
+window.addEventListener('resize',()=>{if(gameRunning)resizeGame();});
+
+/* ==================== 结尾烟花+彩蛋 ==================== */
+// 给照片页加漂浮光点和光斑
+document.querySelectorAll('.photo-dark').forEach(pg=>{
+  ['b1','b2','b3'].forEach(c=>{
+    const b=document.createElement('div');
+    b.className='bokeh '+c;
+    pg.appendChild(b);
+  });
+  for(let i=0;i<12;i++){
+    const s=document.createElement('div');
+    s.className='sparkle';
+    const size=rand(4,10);
+    s.style.cssText=`left:${rand(5,95)}%;bottom:${rand(-10,50)}%;width:${size}px;height:${size}px;animation-duration:${rand(6,12)}s;animation-delay:${rand(0,8)}s;`;
+    pg.appendChild(s);
+  }
+});
+let eggLock=false;
+let eggBusy=false;
+document.getElementById('end').addEventListener('click',(e)=>{
+  launchFirework(e.clientX,e.clientY);
+  setTimeout(()=>launchFirework(e.clientX+rand(-100,100),e.clientY+rand(-30,30)),200);
+  if(eggBusy)return;
+  const now=Date.now();
+  if(now-lastEggClick<400)return;
+  lastEggClick=now;
+  eggClicks++;
+  const hint=document.getElementById('eggHint');
+  if(eggClicks>=6 && !egg2Shown){egg2Shown=true;eggBusy=true;showEgg2();if(hint)hint.style.display='none';setTimeout(()=>eggBusy=false,3500);}
+  else if(eggClicks>=3 && !eggShown){eggShown=true;showEgg1();if(hint)hint.textContent='还 差 '+(6-eggClicks)+' 下';}
+  else if(eggShown && eggClicks<6){
+    if(hint)hint.textContent='还 差 '+(6-eggClicks)+' 下';
+    const e1h=document.getElementById('egg1Hint');
+    if(e1h)e1h.textContent='还 差 '+(6-eggClicks)+' 下';
+  }
+  else if(eggClicks<3 && hint){hint.textContent='还 差 '+(3-eggClicks)+' 下';}
+});
+let lastEggClick=0;
+let eggClicks=0,eggShown=false,egg2Shown=false;
+function makeEggDiv(imgUrl,caption){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:scale(.6) translateY(20px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.9,.3,1.2);';
+  d.innerHTML=`
+    <div style="background:#fff;padding:12px;border-radius:18px;width:220px;transform:rotate(-4deg);box-shadow:0 16px 50px rgba(0,0,0,.2);">
+      <img src="${imgUrl}" style="width:100%;border-radius:12px;display:block;" decoding="async">
+    </div>
+    <div style="margin-top:18px;color:#ff9ec4;font-size:15px;letter-spacing:3px;text-shadow:0 2px 10px rgba(0,0,0,.5);text-align:center;max-width:260px;line-height:1.8;">${caption}</div>
+  `;
+  document.body.appendChild(d);
+  return d;
+}
+const eggDiv=makeEggDiv(
+  'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/PUquboOl9oY7zwxDcNIcyEN2n4d',
+  '恭 喜 你 发 现 了 好 看 的<br><span id="egg1Hint" style="font-size:12px;opacity:.7;">再 点 3 下 屏 幕</span>'
+);
+const egg2Div=makeEggDiv(
+  'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/VLLgbltMKodKdLxSYj8cO29onjb',
+  '就知道你会继续点<br>那 就 满 足 你 一 下 吧<br>MUA~'
+);
+function popEgg(div){
+  requestAnimationFrame(()=>{
+    div.style.opacity='1';
+    div.style.transform='scale(1) translateY(0)';
+  });
+  setTimeout(()=>{
+    div.style.opacity='0';
+    div.style.transform='scale(.8) translateY(-30px)';
+  },3500);
+}
+function showEgg1(){
+  popEgg(eggDiv);
+}
+function showEgg2(){
+  // 先把第一个收回去
+  eggDiv.style.transition='all .6s ease';
+  eggDiv.style.transform='scale(0) rotate(-20deg)';
+  eggDiv.style.opacity='0';
+  setTimeout(()=>{
+    eggDiv.style.display='none';
+    popEgg(egg2Div);
+  },600);
+  setTimeout(startReplay,4000);
+}
+function startReplay(){
+  const items=[
+    {t:'img',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/UUKQbCJzooy1UxxhCfhcwxXPnke'},
+    {t:'img',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/RIHWbrjpyoRHLoxBsxIcjfmknBe'},
+    {t:'img',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/RlFNbZL0noXYMIxn6MTccPEPnBe'},
+    {t:'img',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/Ri2hbq66jodUYux9U0zcKTOwnof'},
+    {t:'video',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/XroJbRU9NoNUb3xgp3ZcCvGAnIZ'},
+    {t:'video',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/MyKPbacrsoUmbFxUDcjccv9gn8b'},
+    {t:'video',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/FhlpbeAeMo7m5QxYoDccKZsrn4f'},
+    {t:'img',u:'https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/K6eyb0sPYoWAqIx2GU3cfhvwnjd'}
+  ];
+  const texts=['愿 你 十 八 岁 快 乐','愿 你 天 天 开 心','未 来 可 期','独 一 无 二'];
+  // 预加载
+  items.forEach(it=>{
+    if(it.t==='img'){const im=new Image();im.src=it.u;}
+    else{const v=document.createElement('video');v.src=it.u;v.preload='auto';}
+  });
+  const rp=document.getElementById('replay');
+  const cA=document.getElementById('replay1');
+  const cB=document.getElementById('replay2');
+  const rtext=document.getElementById('replayText');
+  const bokeh=document.getElementById('replayBokeh');
+  let cur=cA,next=cB;
+  rp.style.display='flex';
+  requestAnimationFrame(()=>{rp.style.opacity='1';});
+  // 烟花
+  const fw=document.getElementById('replayFireworks');
+  const fctx=fw.getContext('2d');
+  fw.width=window.innerWidth;fw.height=window.innerHeight;
+  const particles=[];
+  function launchFirework(){
+    const x=Math.random()*fw.width;
+    const y=Math.random()*fw.height*0.4;
+    const colors=[[255,180,200],[200,180,255],[180,220,255],[255,220,180],[200,255,220]];
+    const c=colors[Math.floor(Math.random()*colors.length)];
+    for(let j=0;j<100;j++){
+      const angle=(Math.PI*2*j)/100;
+      const speed=Math.random()*1.5+0.5;
+      particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,alpha:1,c:c,trail:[]});
+    }
+  }
+  setInterval(launchFirework,2200);
+  launchFirework();
+  function animateFW(){
+    fctx.fillStyle='rgba(10,8,16,0.05)';
+    fctx.fillRect(0,0,fw.width,fw.height);
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.trail.push({x:p.x,y:p.y});
+      if(p.trail.length>5)p.trail.shift();
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.006;p.alpha-=0.0025;
+      if(p.alpha<=0){particles.splice(i,1);continue;}
+      // 拖尾
+      for(let t=0;t<p.trail.length;t++){
+        fctx.beginPath();
+        fctx.arc(p.trail[t].x,p.trail[t].y,1,0,Math.PI*2);
+        fctx.fillStyle=`rgba(${p.c[0]},${p.c[1]},${p.c[2]},${p.alpha*t/p.trail.length*0.5})`;
+        fctx.fill();
+      }
+      fctx.beginPath();
+      fctx.arc(p.x,p.y,1.8,0,Math.PI*2);
+      fctx.fillStyle=`rgba(${p.c[0]},${p.c[1]},${p.c[2]},${p.alpha})`;
+      fctx.fill();
+    }
+    requestAnimationFrame(animateFW);
+  }
+  animateFW();
+    for(let k=0;k<25;k++){
+      const b=document.createElement('div');
+      const size=Math.random()*150+50;
+      const hues=['200,150,255','255,200,150','180,200,255','255,180,200'];
+      const hue=hues[Math.floor(Math.random()*hues.length)];
+      b.style.cssText=`position:absolute;width:${size}px;height:${size}px;border-radius:50%;background:radial-gradient(circle,rgba(${hue},${Math.random()*0.1+0.05}),transparent 70%);left:${Math.random()*100}%;top:${Math.random()*100}%;animation:float${k%3} ${10+Math.random()*10}s ease-in-out infinite alternate;pointer-events:none;z-index:0;`;
+      bokeh.appendChild(b);
+    }
+  let bstyle=document.createElement('style');
+  bstyle.textContent='@keyframes float0{0%{transform:translate(0,0)}100%{transform:translate(30px,-40px)}}@keyframes float1{0%{transform:translate(0,0)}100%{transform:translate(-40px,30px)}}@keyframes float2{0%{transform:translate(0,0)}100%{transform:translate(20px,50px)}}@keyframes replaySlide{0%{transform:scale(1.08)}100%{transform:scale(1)}}';
+  document.head.appendChild(bstyle);
+  let i=-1,timer=null;
+  function makeEl(item){
+    let el;
+    if(item.t==='video'){
+      el=document.createElement('video');
+      el.src=item.u;el.muted=true;el.loop=true;el.autoplay=true;el.playsInline=true;
+      el.style.cssText='width:100%;height:100%;object-fit:cover;';
+    } else {
+      el=document.createElement('img');
+      el.src=item.u;
+      el.style.cssText='width:100%;height:100%;object-fit:cover;';
+    }
+    return el;
+  }
+  next.style.display='none';
+  function show(){
+    i++;
+    const curI=i;
+    const item=items[curI%items.length];
+    next.innerHTML='';
+    const el=makeEl(item);
+    next.appendChild(el);
+    next.style.display='block';
+    next.style.transition='none';
+    next.style.transform='scale(1.15)';
+    next.style.opacity='0';
+    next.style.filter='blur(20px)';
+    void next.offsetWidth;
+    next.style.transition='all 1.2s cubic-bezier(.22,1,.36,1)';
+    next.style.transform='scale(1)';
+    next.style.opacity='1';
+    next.style.filter='blur(0)';
+    if(cur.firstElementChild){
+      cur.style.transition='all 1.2s cubic-bezier(.22,1,.36,1)';
+      cur.style.transform='scale(0.75)';
+      cur.style.opacity='0';
+      cur.style.filter='blur(20px)';
+    }
+    if(item.t==='video'){
+      el.muted=true;el.playsInline=true;el.loop=true;
+      el.play().catch(()=>{});
+    }
+    rtext.style.opacity='0';
+    setTimeout(()=>{
+      rtext.textContent=texts[curI%texts.length];
+      rtext.style.opacity='1';
+    },500);
+    [cur,next]=[next,cur];
+    clearTimeout(timer);
+    timer=setTimeout(show,4500);
+  }
+  show();
+  rp.onclick=()=>{clearTimeout(timer);show();};
+}
+
+/* 预加载回忆轮播图片 */
+['UUKQbCJzooy1UxxhCfhcwxXPnke','RIHWbrjpyoRHLoxBsxIcjfmknBe','RlFNbZL0noXYMIxn6MTccPEPnBe','Ri2hbq66jodUYux9U0zcKTOwnof','K6eyb0sPYoWAqIx2GU3cfhvwnjd'].forEach(t=>{
+  const im=new Image();
+  im.src='https://media.doubao.com/space/api/box/stream/download/all_by_mount_point/'+t;
+});
+/* 预加载唱歌视频 */
+(function(){
+  const v=document.getElementById('clip2');
+  v.preload='auto';
+  v.muted=true;
+  v.play().then(()=>{v.pause();v.currentTime=0;v.muted=false;}).catch(()=>{});
+})();
+</script>
+</body>
+</html>
