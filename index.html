@@ -503,33 +503,10 @@ function pauseAllMedia(){
 function resumeMedia(){
   if(globalMuted)return;
   const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
-  // 在唱歌页不恢复herSong（clip2在播），其他页恢复
   if(wasPlayingOnHide&&!onPage6){
     const hs=document.getElementById('herSong');
     if(hs){hs.volume=0.35;hs.play().catch(()=>{});}
   }
-  // 恢复BGM
-  if(bgmGain&&audioCtx&&bgmTickFn){
-    try{
-      if(!onPage6){
-        bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
-        bgmGain.gain.setValueAtTime(0,audioCtx.currentTime);
-        bgmGain.gain.linearRampToValueAtTime(.3,audioCtx.currentTime+.5);
-        if(!bgmTimer){bgmTimer=setInterval(bgmTickFn,450);}
-      }
-    }catch(e){}
-  }
-  // 回忆轮播里的视频重新播放，并强制容器恢复显示
-  document.querySelectorAll('#replay1,#replay2').forEach(c=>{
-    if(c.style.display!=='none'){
-      c.style.opacity='1';
-      c.style.transform='scale(1)';
-      c.style.filter='blur(0)';
-    }
-  });
-  document.querySelectorAll('#replay1 video,#replay2 video').forEach(v=>{
-    v.muted=true;v.play().catch(()=>{});
-  });
   // page6唱歌视频恢复
   const cv=document.getElementById('clip2');
   if(cv&&onPage6){cv.muted=false;cv.play().catch(()=>{});}
