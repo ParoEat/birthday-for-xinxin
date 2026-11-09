@@ -1081,8 +1081,8 @@ function gameLoop(){
   gtx.clearRect(0,0,GW,GH);
   // 篮子
   gtx.save();
-  gtx.shadowColor='rgba(212,96,138,.4)';
-  gtx.shadowBlur=15;
+  gtx.shadowColor='rgba(212,96,138,.3)';
+  gtx.shadowBlur=8;
   gtx.fillStyle='#ff9ec4';
   drawRoundRect(basketX-35,basketY-15,70,30,15);
   gtx.fill();
@@ -1192,7 +1192,7 @@ let lastEggClick=0;
 let eggClicks=0,eggShown=false,egg2Shown=false;
 function makeEggDiv(imgUrl,caption){
   const d=document.createElement('div');
-  d.style.cssText='position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:scale(.6) translateY(20px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.9,.3,1.2);';
+  d.style.cssText='position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:scale(.6) translateY(20px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.9,.3,1.2);background:rgba(10,8,20,.85);';
   d.innerHTML=`
     <div style="background:#fff;padding:12px;border-radius:18px;width:220px;transform:rotate(-4deg);box-shadow:0 16px 50px rgba(0,0,0,.2);">
       <img src="${imgUrl}" style="width:100%;border-radius:12px;display:block;" decoding="async">
@@ -1366,7 +1366,14 @@ function startReplay(){
     timer=setTimeout(show,4500);
   }
   show();
-  rp.onclick=()=>{clearTimeout(timer);show();};
+  let animating=false;
+  rp.onclick=()=>{
+    if(animating)return;
+    animating=true;
+    clearTimeout(timer);
+    show();
+    setTimeout(()=>{animating=false;},1200);
+  };
 }
 
 /* 预加载回忆轮播图片 */
