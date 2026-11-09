@@ -499,8 +499,14 @@ function resumeMedia(){
   if(audioCtx&&audioCtx.state==='suspended'){
     audioCtx.resume().catch(()=>{});
   }
-  if(bgmGain&&audioCtx){
-    try{bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);bgmGain.gain.value=.4;}catch(e){}
+  // 检查当前页，如果在page6唱歌页就不恢复BGM音量
+  const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
+  if(bgmGain&&audioCtx&&!onPage6){
+    try{
+      bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      bgmGain.gain.setValueAtTime(bgmGain.gain.value,audioCtx.currentTime);
+      bgmGain.gain.linearRampToValueAtTime(.4,audioCtx.currentTime+.5);
+    }catch(e){}
   }
   // 回忆轮播里的视频重新播放，并强制容器恢复显示
   document.querySelectorAll('#replay1,#replay2').forEach(c=>{
@@ -1338,20 +1344,20 @@ function startReplay(){
     next.style.display='block';
     next.style.zIndex='3';
     next.style.transition='none';
-    next.style.transform='scale(1.2) translateY(40px)';
+    next.style.transform='scale(1.15) translateY(20px)';
     next.style.opacity='0';
-    next.style.filter='blur(25px)';
+    next.style.filter='blur(18px)';
     void next.offsetWidth;
-    next.style.transition='all 1.2s cubic-bezier(.16,1,.3,1)';
+    next.style.transition='all .9s cubic-bezier(.22,1,.36,1)';
     next.style.transform='scale(1) translateY(0)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
       cur.style.zIndex='2';
-      cur.style.transition='all 1.2s cubic-bezier(.16,1,.3,1)';
-      cur.style.transform='scale(0.7) translateY(-50px)';
+      cur.style.transition='all .9s cubic-bezier(.22,1,.36,1)';
+      cur.style.transform='scale(0.75) translateY(-30px)';
       cur.style.opacity='0';
-      cur.style.filter='blur(25px)';
+      cur.style.filter='blur(18px)';
     }
     if(item.t==='video'){
       el.muted=true;el.playsInline=true;el.loop=true;
@@ -1361,20 +1367,13 @@ function startReplay(){
     setTimeout(()=>{
       rtext.textContent=texts[curI%texts.length];
       rtext.style.opacity='1';
-    },500);
+    },400);
     [cur,next]=[next,cur];
     clearTimeout(timer);
     timer=setTimeout(show,4500);
   }
   show();
-  let animating=false;
-  rp.onclick=()=>{
-    if(animating)return;
-    animating=true;
-    clearTimeout(timer);
-    show();
-    setTimeout(()=>{animating=false;},1200);
-  };
+  rp.onclick=()=>{clearTimeout(timer);show();};
 }
 
 /* 预加载回忆轮播图片 */
