@@ -745,7 +745,15 @@ function go(name,dir){
   } else {
     cv.classList.remove('dark');
   }
-  if(name==='gameStage'){startGame(); stopHerSong();}
+  if(name==='gameStage'){startGame(); stopHerSong();
+    // 确保BGM在播（切后台回来后可能停了）
+    if(bgmGain&&audioCtx&&!bgmTimer&&bgmTickFn&&!globalMuted){
+      bgmGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      bgmGain.gain.setValueAtTime(bgmGain.gain.value,audioCtx.currentTime);
+      bgmGain.gain.linearRampToValueAtTime(.3,audioCtx.currentTime+.5);
+      bgmTimer=setInterval(bgmTickFn,450);
+    }
+  }
   if(name==='unlock'){
     stopHerSong();
     playBirthdaySong();
@@ -925,8 +933,8 @@ function startHerSongFadeIn(){
     herSongStarted=true;
     // 用线性插值平滑渐入，每秒只设10次，避免跳变
     const startVol=hs.volume;
-    const target=0.4;
-    const steps=20; // 20步=1秒走完
+    const target=0.35;
+    const steps=40; // 40步=2秒柔和渐入
     let step=0;
     if(herFadeTimer)clearInterval(herFadeTimer);
     herFadeTimer=setInterval(()=>{
@@ -1357,13 +1365,13 @@ function startReplay(){
     next.style.opacity='0';
     next.style.filter='blur(20px)';
     void next.offsetWidth;
-    next.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
+    next.style.transition='all 1.4s cubic-bezier(.32,.72,0,1)';
     next.style.transform='scale(1)';
     next.style.opacity='1';
     next.style.filter='blur(0)';
     if(cur.firstElementChild){
       cur.style.zIndex='2';
-      cur.style.transition='all 1.1s cubic-bezier(.32,.72,0,1)';
+      cur.style.transition='all 1.4s cubic-bezier(.32,.72,0,1)';
       cur.style.transform='scale(0.6)';
       cur.style.opacity='0';
       cur.style.filter='blur(20px)';
