@@ -528,9 +528,10 @@ function resumeMedia(){
   document.querySelectorAll('#replay1 video,#replay2 video').forEach(v=>{
     v.muted=true;v.play().catch(()=>{});
   });
-  // page6唱歌视频恢复
+  // page6唱歌视频恢复——只在当前确实在page6时才恢复
   const cv=document.getElementById('clip2');
-  if(cv&&!cv.paused===false){cv.muted=false;cv.play().catch(()=>{});}
+  const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
+  if(cv&&onPage6){cv.muted=false;cv.play().catch(()=>{});}
 }
 window.addEventListener('pagehide',pauseAllMedia);
 window.addEventListener('blur',pauseAllMedia);
