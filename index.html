@@ -736,20 +736,30 @@ function go(name,dir){
     playBirthdaySong();
     launchFirework();launchFirework();launchFirework();
   }
-  // 进过渡页：生日歌渐弱停掉，她的歌开始渐入（只第一次从头）
-  if(name==='intro1'){
-    fadeOutBGM();
-    if(!herSongStarted)startHerSongFadeIn();
+  // intro1到page7：生日歌继续，不播她的歌
+  // 离开唱歌视频页：停视频，开始她的歌（第一次渐入）
+  if(name!=='page6'){
+    const v=document.getElementById('clip2');
+    if(!v.paused){v.pause();v.currentTime=0;}
+    if(herFadeTimer){clearInterval(herFadeTimer);herFadeTimer=null;}
+    herFading=false;
+    // 只在page6之后（end/page8/回忆轮播等）才播她的歌
+    const afterSinging=['page8','end'];
+    if(afterSinging.includes(name)){
+      if(!herSongStarted){startHerSongFadeIn();}
+      else{
+        const hs=document.getElementById('herSong');
+        hs.volume=0.35;
+        hs.play().catch(()=>{});
+      }
+    }
   }
-  // 提前预加载唱歌视频（进page7时就静音播放强制缓冲）
+  // 提前预加载唱歌视频
   if(name==='page7'||name==='page9'){
     const v=document.getElementById('clip2');
     v.muted=true;
-    v.play().then(()=>{
-      if(name!=='page6'){v.pause();v.currentTime=0;}
-    }).catch(()=>{});
+    v.play().then(()=>{if(name!=='page6'){v.pause();v.currentTime=0;}}).catch(()=>{});
   }
-  // 到唱歌视频页：渐出BGM再停，播视频
   if(name==='page6'){
     const hs=document.getElementById('herSong');
     if(!hs.paused){
