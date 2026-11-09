@@ -505,12 +505,6 @@ function resumeMedia(){
   if(audioCtx&&audioCtx.state==='suspended'){
     audioCtx.resume().catch(()=>{});
   }
-  // 重启八音盒BGM（如果之前在播且不在唱歌页）
-  const onPage6=document.getElementById('page6')&&document.getElementById('page6').classList.contains('active');
-  if(typeof bgmTimer!=='undefined'&&!bgmTimer&&!onPage6&&!globalMuted){
-    startBGM();
-  }
-  // 不动bgmGain——audioCtx.resume()会自动恢复所有正在播放的oscillator
   // 回忆轮播里的视频重新播放，并强制容器恢复显示
   document.querySelectorAll('#replay1,#replay2').forEach(c=>{
     if(c.style.display!=='none'){
@@ -822,8 +816,6 @@ function startBGM(){
   bgmGain.gain.value=0;
   bgmGain.connect(audioCtx.destination);
   bgmGain.gain.linearRampToValueAtTime(.35,audioCtx.currentTime+2.5);
-
-  // 频率表
   const N={C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,
            C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,B5:987.77,C6:1046.5};
   // 和弦进行：C - G - Am - F  (经典温馨)
