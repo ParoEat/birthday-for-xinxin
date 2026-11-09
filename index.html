@@ -910,11 +910,11 @@ function startBGM(){
   bgmTickFn=function tick(){
     const t=audioCtx.currentTime+.05;
     const chord=chords[Math.floor(bgmStep/4)%chords.length];
-    // 琶音伴奏（每拍一个分解音）
-    const arpNote=chords[bgmStep%4];
-    playPiano(arpNote,t,beat*1.5,.12);
-    // 高八度琶音
-    playPiano(arpNote*2,t,beat*.8,.05);
+    // 琶音伴奏（高八度，不要低频嘟嘟声）
+    const arpNote=chords[bgmStep%4]*2;
+    playPiano(arpNote,t,beat*1.5,.1);
+    // 更高八度泛音
+    playPiano(arpNote*2,t,beat*.8,.04);
     // 旋律
     const melNote=melody[bgmStep%melody.length];
     if(melNote>0)playPiano(melNote,t,beat*1.2,.22);
@@ -1087,6 +1087,8 @@ document.addEventListener('touchstart',(e)=>{
   touchX=e.touches[0].clientX;touchY=e.touches[0].clientY;
 },{passive:true});
 document.addEventListener('touchend',(e)=>{
+  // 游戏页不响应手势翻页
+  if(curIdx===1)return;
   const dx=e.changedTouches[0].clientX-touchX;
   const dy=e.changedTouches[0].clientY-touchY;
   if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){
